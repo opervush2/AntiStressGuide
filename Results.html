@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stress Assessment</title>
+<style>
+body { font-family: Roboto, Arial, sans-serif; background:#eaf5e8; margin:0; padding:0; }
+.container { max-width:700px; margin:30px auto; background:#fff; padding:30px; border-radius:10px; }
+h1 { text-align:center; color:#2E5D3D; }
+.question { margin:15px 0; }
+button { margin-top:10px; padding:12px 25px; color:#fff; background:#2E5D3D; border:none; border-radius:5px; cursor:pointer; font-size:16px; }
+button:hover { background:#27623e; }
+.score { margin-top:15px; padding:15px; border:1px solid #ccc; border-radius:5px; background:#d4efd5; text-align:center; }
+label { display:block; margin:5px 0; }
+input[type="radio"] { margin-right:5px; }
+select, input[type=email] { width:100%; padding:8px; margin-top:5px; border-radius:5px; border:1px solid #ccc; }
+.paypal-button { margin-top:15px; display:block; width:100%; max-width:300px; text-align:center; }
+.paypal-button a { display:block; padding:12px; background:#009cde; color:#fff; text-decoration:none; border-radius:5px; font-weight:bold; }
+.paypal-button a:hover { background:#007bb8; }
+nav { text-align:center; margin-bottom:20px; }
+nav a { margin:0 10px; text-decoration:none; color:#2E5D3D; font-weight:bold; }
+nav a:hover { color:#27623e; }
+</style>
+</head>
+<body>
+<div class="container">
+  <nav>
+    <a href="index.html">Home</a>
+    <a href="results.html">Assessment</a>
+    <a href="recommendations.html">Recommendations</a>
+  </nav>
+
+  <h1>Your Stress Assessment</h1>
+
+  <form id="wellBeingForm">
+    <div id="questions"></div>
+
+    <label>Age:
+      <select name="age" required>
+        <option value="" disabled selected>Select age</option>
+        <option value="18-30">18–30</option>
+        <option value="31-50">31–50</option>
+        <option value="51-70">51–70</option>
+        <option value=">70">>70</option>
+      </select>
+    </label>
+    <label>Gender:
+      <select name="gender" required>
+        <option value="" disabled selected>Select gender</option>
+        <option value="Male">Male</option>
+        <option value="Female">Female</option>
+        <option value="Other">Other</option>
+      </select>
+    </label>
+    <label>Email (optional):
+      <input type="email" name="email" placeholder="you@example.com">
+    </label>
+
+    <button type="submit">Submit</button>
+  </form>
+
+  <div class="score" id="results" style="display:none;">
+    <p>Stress Score: <span id="stress"></span></p>
+    <p>Balance Score: <span id="balance"></span></p>
+    <p>Well-Being Score: <span id="wellbeing"></span></p>
+
+    <button id="newForm">Fill Again</button>
+    <div class="paypal-button">
+      <a href="https://www.paypal.com/pay?amount=10" target="_blank">Pay for Full Report</a>
+    </div>
+  </div>
+</div>
+
+<script>
+const questionTitles = [
+  "Over the past month, how often have you felt overwhelmed by work demands?",
+  "During the past month, I often felt emotionally drained after work.",
+  "In the last month, I had difficulty relaxing after work.",
+  "Over the past month, I found myself worrying about work during personal time.",
+  "During the last month, I sometimes felt unable to cope with all my work responsibilities.",
+  "In the past month, I had sufficient control over how I completed my work tasks.",
+  "Over the last month, my workload prevented me from completing important personal tasks.",
+  "During the past month, my work schedule allowed me to maintain work-life balance.",
+  "In the last month, support from colleagues helped me cope with stress.",
+  "Over the past month, I could take breaks and recover adequately during and between workdays.",
+  "During the last month, I felt energetic and capable of handling work and personal responsibilities.",
+  "In the past month, I was satisfied with my overall well-being and quality of life.",
+  "Over the past month, I felt physically and mentally healthy, allowing me to meet daily demands.",
+  "During the last month, I felt confident about handling personal problems.",
+  "In the past month, I felt that things were going my way."
+];
+
+const choices = ["0 - Never","1 - Rarely","2 - Sometimes","3 - Often","4 - Very Often"];
+const questionsDiv = document.getElementById('questions');
+
+// Fragen erstellen
+questionTitles.forEach((q,i)=>{
+  const div = document.createElement('div');
+  div.className='question';
+  div.innerHTML = `<label>${i+1}. ${q}</label>
+    ${choices.map(c=>`<label><input type="radio" name="q${i}" value="${c[0]}" required> ${c}</label>`).join('')}`;
+  questionsDiv.appendChild(div);
+});
+
+const form = document.getElementById('wellBeingForm');
+
+form.addEventListener('submit', async e=>{
+  e.preventDefault();
+
+  const formData = {
+    age: form.age.value,
+    gender: form.gender.value,
+    email: form.email.value,
+    questions: questionTitles.map((title,i)=>{
+      const sel = form.querySelector(`input[name="q${i}"]:checked`);
+      return {title, answer: sel ? sel.value : 0};
+    })
+  };
+
+  try {
+    const response = await fetch("https://script.google.com/macros/s/AKfycbyKtSy_RWa4_kIr3VGGjWM8cfW3K6yLnqp_8t3dtcvlmQ3cnU0Z23Vetn0wrUp536Sw/exec", {
+      method: "POST",
+      body: JSON.stringify(formData),
+      headers: {"Content-Type": "application/json"}
+    });
+
+    const result = await response.json();
+
+    document.getElementById('stress').textContent = result.scores.stress;
+    document.getElementById('balance').textContent = result.scores.balance;
+    document.getElementById('wellbeing').textContent = result.scores.wellbeing;
+
+    form.style.display = 'none';
+    document.getElementById('results').style.display = 'block';
+
+  } catch(err) {
+    alert("Fehler beim Senden: "+err);
+  }
+});
+
+// Fill Again
+document.getElementById('newForm').addEventListener('click', ()=>{
+  form.reset();
+  form.style.display = 'block';
+  document.getElementById('results').style.display = 'none';
+});
+</script>
+</body>
+</html>
